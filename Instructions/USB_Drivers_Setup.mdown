@@ -1,0 +1,20 @@
+# Notes of what it took to get STM32F072 USB working
+
+Ensure that the STM32 clocks are configured properly.
+	* Enable 48MHz clock.
+	* Enable GPIOA clock since the USB DM/DP pins are on this port
+	* Enable USB peripheral clock
+	* Setup the Clock Recovery System (CRS) for USB
+	* Set system and usb clock to HSI48
+
+Ensure that the GPIO pins for the DM/DP pins are configured properly and set the appropriate alternate function.
+
+Once all the code in the firware is configured properly, flash it to the board and connect the USB connector to PC.
+Since Windows won't recognize our device without a driver, we need to create a fake driver using libusb-win32 inf wizard. Make sure that the STM32 is plugged in before running the inf wizard application. Make sure that the same VendorID and ProductID are entered as the firmware values. Once this is done, close the application.
+
+Go to Device Manager and find your device. Right click and click on Update Driver Software. Choose to find the software on computer and point to the directory where the INF files are stored. If Windows complains that the third party INF driver does not have a digital signature, a few extra steps have to be taken. Look at the reply by Wade_M at this page: https://answers.microsoft.com/en-us/windows/forum/windows_8-hardware/how-to-install-a-driver-that-does-not-contain/7c3f299b-3483-4c96-8c44-87c7451af222
+
+After following the steps above, try to reinstall the driver through Device Manager as specified above. The driver should be successfully installed after these steps. Once this done, we can use Wireshark to monitor the enumeration and flow of packets between the PC host and the microcontroller. Note: If multiple USBcap* line items show up in Wireshark window at startup, find the one that corresponds to the USB port where you are plugging in the USB cable from the microcontroller.
+
+Following the steps above should allow you to communicate between the PC and the microcontroller over USB!
+

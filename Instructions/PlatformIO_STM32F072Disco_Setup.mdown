@@ -1,0 +1,45 @@
+# Install the PlatformIO IDE from their website
+
+In order to install the STM32 tools, we can download stm32-libopencm3 example project and the IDE should install all the necessary tools.
+
+Since the STM32F072-DISCO board is not included by default in the IDE, we need to create a custom board. This done by creating "disco_f072rb.json" file in boards folder which is located at %HOMEPATH%\.platformio\platforms\ststm32\boards"
+
+The board JSON file should look as follows:
+{  
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0", 
+    "f_cpu": "48000000L", 
+    "mcu": "stm32f072rbt6",
+    "variant": "stm32f072rbt6",
+    "ldscript": "stm32f0_discovery.ld"
+  }, 
+  "frameworks": ["libopencm3","mbed","cmsis","spl"], 
+  "name": "STM32F072 Discovery", 
+  "upload": {
+    "maximum_ram_size": 16384, 
+    "maximum_size": 131072, 
+    "protocol": "stlink"
+  }, 
+  "url": "https://developer.mbed.org/platforms/ST-Nucleo-F072RB/", 
+  "vendor": "ST"
+}
+
+Note that since we want to use libopencm3, we need to ensure that it is listed under frameworks. Also since we are using the Discovery board, we need to list stlink as the protocol. Finally, a name for the linker file needs to be listed for "ldscript" field.
+
+We need to create the linker file that we listed in disco_f072rb.json. I borrowed the linker file from the libopencm3-examples repository. The generic linker file for the STM32F0 family of microcontrollers is located at /examples/stm32/f0/stm32f0-discovery/stm32f0-discovery.ld. I created copy of this file and named it stm32f0_discovery.ld. 
+
+If you notice the contents of the linker file, you will notice that the linker file has the following line:
+INCLUDE libopencm3_stm32f0.ld
+When linking the binary, the platformio tool is going to look for the libopencm3_stm32f0.ld in the same folder as our linker file. In order to ensure that this works, place our stm32f0_discovery.ld linker file in the following folder:
+.platformio\packages\framework-libopencm3\lib\stm32\f0\
+
+In the platform.ini file, add the following:
+
+[env:disco_f072rb]
+platform = ststm32
+framework = libopencm3
+build_flags = -DSTM32F0
+board = disco_f072rb
+
+This should allow you to build and upload your code to the discovery board!!
