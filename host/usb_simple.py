@@ -1,43 +1,18 @@
 import usb.core
+import usb.util as uu
+from struct import *
+import array
 
-# LEDs
-UP_LED = 0
-DOWN_LED = 1
-LEFT_LED = 2
-RIGHT_LED = 3
-
-# LED functions
-LED_ON = 1
-LED_OFF = 2
-LED_TOGGLE = 3
+CMD_TOGGLE = 0
+CMD_LB_WRITE = 1
+CMD_LB_READ = 2
 
 
-def led_on(usb_dev, led):
-	usb_dev.ctrl_transfer(0x40, led, LED_ON, 0, 'LED on')
+def bytesToString(inArray):
+	return "".join(map(chr, inArray))
 
-def led_off(usb_dev, led):
-	usb_dev.ctrl_transfer(0x40, led, LED_OFF, 0, 'LED off')
-
-def led_toggle(usb_dev, led):
-	usb_dev.ctrl_transfer(0x40, led, LED_TOGGLE, 0, 'LED toggle')
-
-def led_toggle_all(usb_dev):
-	led_toggle(usb_dev, UP_LED)
-	led_toggle(usb_dev, DOWN_LED)
-	led_toggle(usb_dev, LEFT_LED)
-	led_toggle(usb_dev, RIGHT_LED)
-
-def led_on_all(usb_dev):
-	led_on(usb_dev, UP_LED)
-	led_on(usb_dev, DOWN_LED)
-	led_on(usb_dev, LEFT_LED)
-	led_on(usb_dev, RIGHT_LED)
-
-def led_off_all(usb_dev):
-	led_off(usb_dev, UP_LED)
-	led_off(usb_dev, DOWN_LED)
-	led_off(usb_dev, LEFT_LED)
-	led_off(usb_dev, RIGHT_LED)
+def stringToBytes(inString):
+	return array.array('B', inString)
 
 if __name__ == '__main__':
 
@@ -49,38 +24,59 @@ if __name__ == '__main__':
 	# Set the default configuration
 	dev.set_configuration()
 
+	reqIn = uu.CTRL_IN | uu.CTRL_TYPE_VENDOR | uu.CTRL_RECIPIENT_INTERFACE
+	reqOut = uu.CTRL_OUT | uu.CTRL_TYPE_VENDOR | uu.CTRL_RECIPIENT_INTERFACE
+
 	while True:
 		command = raw_input("> ")
 
-		if command == "on":
-			led_on_all(dev)
-		elif command == "off":
-			led_off_all(dev)
-		elif command == "toggle":
-			led_toggle_all(dev)
-		elif command == "up on":
-			led_on(dev, UP_LED)
-		elif command == "up off":
-			led_off(dev, UP_LED)
-		elif command == "up toggle":
-			led_toggle(dev, UP_LED)
-		elif command == "down on":
-			led_on(dev, DOWN_LED)
-		elif command == "down off":
-			led_off(dev, DOWN_LED)
-		elif command == "down toggle":
-			led_toggle(dev, DOWN_LED)
-		elif command == "left on":
-			led_on(dev, LEFT_LED)
-		elif command == "left off":
-			led_off(dev, LEFT_LED)
-		elif command == "left toggle":
-			led_toggle(dev, LEFT_LED)
-		elif command == "right on":
-			led_on(dev, RIGHT_LED)
-		elif command == "right off":
-			led_off(dev, RIGHT_LED)
-		elif command == "right toggle":
-			led_toggle(dev, RIGHT_LED)
+		if command == "toggle":
+			print "\n======================================================="
+			print "Toggling LED"
+			print "=======================================================\n"
+			# usb_dev.ctrl_transfer(bmRequestType, bRequest, wValue=0, wIndex=0, data_or_wLength=None, timeout=None)
+			dev.ctrl_transfer(reqOut, CMD_TOGGLE, 0, 0, 'toggle')
+		
+		elif command == "write":
+			# Create empty array
+			str_out = "0x48"
+			buf_out = stringToBytes(str_out)
+			buf_out_len = len(buf_out)
+			print "\n======================================================="
+			print "Control Request Data Transfer"
+			print "======================================================="
+			print "String out: {}".format(str_out)
+			print "Array out length: {}".format(buf_out_len)
+			print "Array out: {}".format(buf_out)
+			print "======================================================="
+			# Write out the buffer to the device
+			dev.ctrl_transfer(reqOut, CMD_LB_WRITE, 0, 0, buf_out)
+
+			# Read data back from the device
+			buf_in = dev.ctrl_transfer(reqIn, CMD_LB_READ, 0, 0, buf_out_len)
+			buf_in_len = len(buf_in)
+			str_in = bytesToString(buf_in)
+			print "String in: {}".format(str_in)
+			print "Array in length: {}".format(buf_in_len)
+			print "Array in: {}".format(buf_in)
+			print "=======================================================\n"
+
+		elif command == "bulk":
+			print "\n======================================================="
+			print "Bulk Data Transfer"
+			print "======================================================="
+			message = raw_input("Enter message to send: ")
+			data = stringToBytes(message)
+			n = dev.write(0x01, data)
+			
+			print "======================================================="
+			print "wrote {} bytes\nstring: {}\nbytes: {}".format(n, message, data)
+			print "======================================================="
+			
+			data = dev.read(0x81, len(data))
+			message = bytesToString(data)
+			print "read {} bytes\nstring: {}\nbytes: {}".format(len(data), message, data)
+			print "=======================================================\n"
+
 		else:
 			print "Wrong input value. Try again"

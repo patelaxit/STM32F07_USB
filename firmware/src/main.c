@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/st_usbfs.h>
@@ -17,15 +19,17 @@
 #define USB_DM_PIN (GPIO11)
 #define USB_DP_PIN (GPIO12)
 
+#define BULK_EP_MAXPACKET 64
+
 // USB Device Descriptor
 const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
-	.bDeviceClass = 0x00,
+	.bDeviceClass = USB_CLASS_VENDOR,
 	.bDeviceSubClass = 0,
 	.bDeviceProtocol = 0,
-	.bMaxPacketSize0 = 64,
+	.bMaxPacketSize0 = BULK_EP_MAXPACKET,
 	.idVendor = 0x10C4,
 	.idProduct = 0x0007,
 	.bcdDevice = 0x0200,
@@ -35,24 +39,43 @@ const struct usb_device_descriptor dev = {
 	.bNumConfigurations = 1,
 };
 
+// USB Endpoint Descriptor
+const struct usb_endpoint_descriptor data_endp[] = {{
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0x01,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = BULK_EP_MAXPACKET,
+	.bInterval = 1,
+},
+{
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0x81,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = BULK_EP_MAXPACKET,
+	.bInterval = 1,
+}};
+
 // USB Interface Descriptor
-const struct usb_interface_descriptor iface = {
+const struct usb_interface_descriptor data_iface[] = {{
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 0,
+	.bInterfaceNumber = 1,
 	.bAlternateSetting = 0,
-	.bNumEndpoints = 0,
-	.bInterfaceClass = 0xFF,
+	.bNumEndpoints = 2,
+	.bInterfaceClass = USB_CLASS_VENDOR,
 	.bInterfaceSubClass = 0,
 	.bInterfaceProtocol = 0,
 	.iInterface = 0,
-};
+	.endpoint = data_endp,
+}};
 
 // USB Interfaces for the configuration
 const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
-		.altsetting = &iface,
+		.altsetting = data_iface,
 	}
 };
 
@@ -70,79 +93,97 @@ const struct usb_config_descriptor config = {
 };
 
 // USB Strings
+char serial[] = "123.456";
 const char *usb_strings[] = {
 	"Axit Patel",
 	"STM32F072 USB Test",
-	"1001",
+	serial,
 };
 
 // Buffer to be used for control requests
-uint8_t usbd_control_buffer[128];
+uint8_t usbd_control_buffer[2*BULK_EP_MAXPACKET];
 
-// Configure GPIO pin based on gpio_func value
-void pin_set(uint32_t gpio_port, uint16_t gpio_pin, uint16_t gpio_func)
+void toggle_led(void)
 {
-	if (gpio_func == 1) {
-		// Turn pin on
-		gpio_set(gpio_port, gpio_pin);
-	} else if (gpio_func == 2) {
-		// Turn pin off
-		gpio_clear(gpio_port, gpio_pin);
-	} else if (gpio_func == 3) {
-		// Toggle pin
-		gpio_toggle(gpio_port, gpio_pin);
-	} else {
-		return;
-	}
+	gpio_toggle(LED_PINS_PORT, UP_LED);
 }
 
 // Callback function for control transfers. We will handle the commands
 // received from the host in this function
 static int simple_control_callback(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
-		uint16_t *len, int (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+	uint16_t *len, int (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
 {
-	(void)buf;
-	(void)len;
-	(void)complete;
-	(void)usbd_dev;
+	(void) complete;
+	(void) usbd_dev;
+	(void) len;
+	(void) buf;
 
-	// If request type is not vendor, ignore request
-	if (req->bmRequestType != 0x40)
-	{
-		return 0;
-	}
+	// Buffer to hold data for loopback tests
+	static uint8_t loopback_buffer[sizeof(usbd_control_buffer)];
 
-	// Perform appropriate action based on bRequest & wValue values received from host
-	// bRequest: LED: 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT
-	// wValue: Function: 1=ON, 2=OFF, 3=TOGGLE
 	switch(req->bRequest) {
-		case 0:
-			pin_set(LED_PINS_PORT, UP_LED, req->wValue);
+		case 0:		// Toggle LED
+			gpio_toggle(LED_PINS_PORT, RIGHT_LED);
+			return USBD_REQ_HANDLED;
 			break;
-		case 1:
-			pin_set(LED_PINS_PORT, DOWN_LED, req->wValue);
+
+		case 1:		// Loopback write
+			toggle_led();
+			if (req->wLength > sizeof(usbd_control_buffer)) {
+				return USBD_REQ_NOTSUPP;
+			}
+			memcpy(loopback_buffer, *buf, req->wLength);
+			return USBD_REQ_HANDLED;
 			break;
-		case 2:
-			pin_set(LED_PINS_PORT, LEFT_LED, req->wValue);
-			break;
-		case 3:
-			pin_set(LED_PINS_PORT, RIGHT_LED, req->wValue);
+
+		case 2:		// Loopback read
+			toggle_led();
+			if (req->wLength > sizeof(usbd_control_buffer)) {
+				return USBD_REQ_NOTSUPP;
+			}
+			*len = req->wLength;
+			memcpy(*buf, loopback_buffer, *len);
+			return USBD_REQ_HANDLED;
 			break;
 		default:
 			break;
 	}
-	return 1;
+
+	return USBD_REQ_NOTSUPP;
+}
+
+// Buffer to hold data for the bulk transfers
+char bulk_buf[64];
+// Length of data for bulk transfers
+int len = 0;
+
+// Callback for when the OUT endpoint receives data
+static void data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
+{
+	(void)ep;
+	// Read the data that was transferred to OUT endpoint
+	len = usbd_ep_read_packet(usbd_dev, 0x01, bulk_buf, 64);
+	// If we received non-zero amount of data, send it back using IN endpoint
+	if (len) {
+		while (usbd_ep_write_packet(usbd_dev, 0x81, bulk_buf, len) == 0);
+	}
 }
 
 // Callback function for set configuration command
 static void usb_set_config_cb(usbd_device *usbd_dev, uint16_t wValue)
 {
 	(void)wValue;
+
+	// Setup OUT bulk endpoint
+	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, data_rx_cb);
+	// Setup IN bulk endpoint
+	usbd_ep_setup(usbd_dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+
 	// Register our custom function for control transfers
 	usbd_register_control_callback(
 				usbd_dev,					// USB device
-				USB_REQ_TYPE_VENDOR,		// Type: Vendor
-				USB_REQ_TYPE_TYPE,			// Type Mask: Request type
+				USB_REQ_TYPE_VENDOR | USB_REQ_TYPE_INTERFACE,
+				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				simple_control_callback);	// Callback function
 }
 
@@ -166,12 +207,9 @@ static void clock_init(void)
 static void gpio_init(void)
 {
 	// Configure LED pins
-	gpio_mode_setup(LED_PINS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, UP_LED |
-																DOWN_LED |
-																LEFT_LED |
-																RIGHT_LED);
+	gpio_mode_setup(LED_PINS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, UP_LED | RIGHT_LED);
 	// Turn off all the LEDs
-	gpio_clear(LED_PINS_PORT, UP_LED | DOWN_LED | LEFT_LED | RIGHT_LED);
+	gpio_clear(LED_PINS_PORT, UP_LED | RIGHT_LED);
 	// Configure USB_DP & USB_DM pins
 	gpio_mode_setup(USB_PINS_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, USB_DP_PIN | USB_DM_PIN);
 }
@@ -181,7 +219,6 @@ int main(void)
 	clock_init();
 	gpio_init();
 
-	// Setup USB
 	usbd_device *usbd_dev;
 	usbd_dev = usbd_init(&st_usbfs_v2_usb_driver,		// USB driver
 						&dev,							// Device descriptor
@@ -190,10 +227,8 @@ int main(void)
 						3,								// Number of USB strings
 						usbd_control_buffer,			// Control buffer
 						sizeof(usbd_control_buffer));	// Control buffer size
-
 	// Register the callback function for Set Configuration command
 	usbd_register_set_config_callback(usbd_dev, usb_set_config_cb);
-
 	// Continuously poll the USB device
 	while (1) {
 		usbd_poll(usbd_dev);

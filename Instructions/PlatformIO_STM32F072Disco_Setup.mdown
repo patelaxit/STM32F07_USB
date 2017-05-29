@@ -1,10 +1,13 @@
-# Install the PlatformIO IDE from their website
+* Install the PlatformIO Atom IDE from their website
+* After installation, run `pio upgrade` command to ensure that all the packages, boards, frameworks, and the PlatformIO core are updated to the latest version.
 
-In order to install the STM32 tools, we can download stm32-libopencm3 example project and the IDE should install all the necessary tools.
+* In order to keep this project portable, we will configure the project so that most of the stuff related to this project is self-contained.
+* Create custom board: The STM32F072 Discovery development board is not included in the default list of boards provided by PlatformIO. Therefore, we must create a custom board.
 
-Since the STM32F072-DISCO board is not included by default in the IDE, we need to create a custom board. This done by creating "disco_f072rb.json" file in boards folder which is located at %HOMEPATH%\.platformio\platforms\ststm32\boards"
+* Create 'boards' directory in the root platformio folder. The path to this folder can be found in PIO docs.
+* In this folder, create a JSON file that will hold the configuration for our board. Name the file to whatever you would like to use when referring to it in platform.ini. I've named it 'stm32f072_disco.json'
 
-The board JSON file should look as follows:
+* Add the following lines to JSON board file:
 {  
   "build": {
     "core": "stm32",
@@ -12,10 +15,10 @@ The board JSON file should look as follows:
     "f_cpu": "48000000L", 
     "mcu": "stm32f072rbt6",
     "variant": "stm32f072rbt6",
-    "ldscript": "stm32f0_discovery.ld"
+    "ldscript": "stm32f072_discovery.ld"
   }, 
-  "frameworks": ["libopencm3","mbed","cmsis","spl"], 
-  "name": "STM32F072 Discovery", 
+  "frameworks": ["libopencm3"], 
+  "name": "STM32F072 Discovery Board", 
   "upload": {
     "maximum_ram_size": 16384, 
     "maximum_size": 131072, 
@@ -25,18 +28,31 @@ The board JSON file should look as follows:
   "vendor": "ST"
 }
 
-Note that since we want to use libopencm3, we need to ensure that it is listed under frameworks. Also since we are using the Discovery board, we need to list stlink as the protocol. Finally, a name for the linker file needs to be listed for "ldscript" field.
+Most of the lines should be self explanatory. Note that we have added libopencm3 as the supported framework. Other frameworks such as `cmisis` and `spl` are also compatible for this board but we will just list libopencm3 since that is the only one we plan on using for this project. Also since we will be using the Discovery board to program the microcontroller, we need to list stlink as the protocol.
 
-We need to create the linker file that we listed in disco_f072rb.json. I borrowed the linker file from the libopencm3-examples repository. The generic linker file for the STM32F0 family of microcontrollers is located at /examples/stm32/f0/stm32f0-discovery/stm32f0-discovery.ld. I created copy of this file and named it stm32f0_discovery.ld. 
+Finally, a name for the linker file needs to be listed for "ldscript" field.
+
+We need to create the linker file that we listed in the board json file. I borrowed the linker file from the libopencm3-examples repository and modified it for the microcontroller that is on the discovery board. Create a file by the name of stm32f072_disco.ld and add the following lines to it:
+/* Linker script for ST STM32F072 DISCOVERY (STM32F072RB, 128K flash, 16K RAM). */
+
+/* Define memory regions. */
+MEMORY
+{
+	rom (rx) : ORIGIN = 0x08000000, LENGTH = 128K
+	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 16K
+}
+
+/* Include the common ld script. */
+INCLUDE libopencm3_stm32f0.ld
 
 If you notice the contents of the linker file, you will notice that the linker file has the following line:
 INCLUDE libopencm3_stm32f0.ld
-When linking the binary, the platformio tool is going to look for the libopencm3_stm32f0.ld in the same folder as our linker file. In order to ensure that this works, place our stm32f0_discovery.ld linker file in the following folder:
+When linking the binary, the platformio tool is going to look for the libopencm3_stm32f0.ld in the same folder as our linker file. In order to ensure that this works, place our stm32f072_disco.ld linker file in the following folder:
 .platformio\packages\framework-libopencm3\lib\stm32\f0\
 
-In the platform.ini file, add the following:
+In the platform.ini file, add the following lines:
 
-[env:disco_f072rb]
+[env:stm32f072_disco]
 platform = ststm32
 framework = libopencm3
 build_flags = -DSTM32F0
