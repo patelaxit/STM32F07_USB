@@ -2,11 +2,7 @@ import usb.core
 import usb.util as uu
 from struct import *
 import array
-
-CMD_TOGGLE = 0
-CMD_LB_WRITE = 1
-CMD_LB_READ = 2
-
+import vendor_requests
 
 def bytesToString(inArray):
 	return "".join(map(chr, inArray))
@@ -24,6 +20,7 @@ if __name__ == '__main__':
 	# Set the default configuration
 	dev.set_configuration()
 
+	# Define request IN and OUT maks
 	reqIn = uu.CTRL_IN | uu.CTRL_TYPE_VENDOR | uu.CTRL_RECIPIENT_INTERFACE
 	reqOut = uu.CTRL_OUT | uu.CTRL_TYPE_VENDOR | uu.CTRL_RECIPIENT_INTERFACE
 
@@ -35,25 +32,39 @@ if __name__ == '__main__':
 			print "Toggling LED"
 			print "=======================================================\n"
 			# usb_dev.ctrl_transfer(bmRequestType, bRequest, wValue=0, wIndex=0, data_or_wLength=None, timeout=None)
-			dev.ctrl_transfer(reqOut, CMD_TOGGLE, 0, 0, 'toggle')
+			dev.ctrl_transfer(reqOut, vendor_requests.LED_TOGGLE, 0, 0, 'toggle')
 		
-		elif command == "write":
+		elif command == "on":
+			print "\n======================================================="
+			print "All LEDs on"
+			print "=======================================================\n"
+			# usb_dev.ctrl_transfer(bmRequestType, bRequest, wValue=0, wIndex=0, data_or_wLength=None, timeout=None)
+			dev.ctrl_transfer(reqOut, vendor_requests.LED_ON, 0, 0, 'on')
+		
+		elif command == "off":
+			print "\n======================================================="
+			print "All LEDs off"
+			print "=======================================================\n"
+			# usb_dev.ctrl_transfer(bmRequestType, bRequest, wValue=0, wIndex=0, data_or_wLength=None, timeout=None)
+			dev.ctrl_transfer(reqOut, vendor_requests.LED_OFF, 0, 0, 'off')
+		
+		elif command == "loopback":
 			# Create empty array
 			str_out = "0x48"
 			buf_out = stringToBytes(str_out)
 			buf_out_len = len(buf_out)
 			print "\n======================================================="
-			print "Control Request Data Transfer"
+			print "Control Request Loopback"
 			print "======================================================="
 			print "String out: {}".format(str_out)
 			print "Array out length: {}".format(buf_out_len)
 			print "Array out: {}".format(buf_out)
 			print "======================================================="
 			# Write out the buffer to the device
-			dev.ctrl_transfer(reqOut, CMD_LB_WRITE, 0, 0, buf_out)
+			dev.ctrl_transfer(reqOut, vendor_requests.CTRL_LOOPBACK_WRITE, 0, 0, buf_out)
 
 			# Read data back from the device
-			buf_in = dev.ctrl_transfer(reqIn, CMD_LB_READ, 0, 0, buf_out_len)
+			buf_in = dev.ctrl_transfer(reqIn, vendor_requests.CTRL_LOOPBACK_READ, 0, 0, buf_out_len)
 			buf_in_len = len(buf_in)
 			str_in = bytesToString(buf_in)
 			print "String in: {}".format(str_in)

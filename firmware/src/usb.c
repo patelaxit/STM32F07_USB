@@ -1,5 +1,4 @@
-#include "usb.h"
-#include "usb_desc.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <libopencm3/stm32/st_usbfs.h>
@@ -7,64 +6,87 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 
+#include "helper.h"
+#include "led.h"
+#include "usb.h"
+#include "usb_desc.h"
+
 #define RCC_USB_PINS_PORT (RCC_GPIOA)
 #define USB_PINS_PORT (GPIOA)
 #define USB_DM_PIN (GPIO11)
 #define USB_DP_PIN (GPIO12)
 
-#define RCC_LED_PORT (RCC_GPIOC)
-#define LED_PINS_PORT (GPIOC)
-
-#define UP_LED (GPIO6)
-#define DOWN_LED (GPIO7)
-#define LEFT_LED (GPIO8)
-#define RIGHT_LED (GPIO9)
-
 usbd_device *dev_global;
 uint8_t usbd_control_buffer[USB_CTRL_BUFFER_SIZE];
 
+// Buffer to hold the loopback data
+static uint8_t loopback_buffer[sizeof(usbd_control_buffer)];
+
+int usb_vendor_request_ctrl_loopback_write(usbd_device *usbd_dev,
+										struct usb_setup_data *req,
+										uint8_t **buf,
+										uint16_t *len,
+										usbd_control_complete_callback *complete)
+{
+	if (req->wLength > sizeof(usbd_control_buffer)) {
+		return USBD_REQ_NOTSUPP;
+	}
+	memcpy(loopback_buffer, *buf, req->wLength);
+	return USBD_REQ_HANDLED;
+}
+
+int usb_vendor_request_ctrl_loopback_read(usbd_device *usbd_dev,
+										struct usb_setup_data *req,
+										uint8_t **buf,
+										uint16_t *len,
+										usbd_control_complete_callback *complete)
+{
+	if (req->wLength > sizeof(usbd_control_buffer)) {
+		return USBD_REQ_NOTSUPP;
+	}
+	*len = req->wLength;
+	memcpy(*buf, loopback_buffer, *len);
+	return USBD_REQ_HANDLED;
+}
+
+// Declare typedef for vendor request function handler
+typedef int (* usb_vendor_request_fn)(usbd_device *usbd_dev,
+									struct usb_setup_data *req,
+									uint8_t **buf,
+									uint16_t *len,
+									usbd_control_complete_callback *complete);
+
+// List of all available vendor request handlers
+static const usb_vendor_request_fn usb_vendor_request_handlers[] = {
+	usb_vendor_request_ctrl_loopback_write,
+	usb_vendor_request_ctrl_loopback_read,
+	usb_vendor_request_led_toggle,
+	usb_vendor_request_led_on,
+	usb_vendor_request_led_off,	
+};
+
 // Callback function for control transfers. We will handle the commands
 // received from the host in this function
-static int simple_control_callback(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
-	uint16_t *len, int (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+static int usb_vendor_request_callback(usbd_device *usbd_dev, 
+										struct usb_setup_data *req, 
+										uint8_t **buf,
+										uint16_t *len, 
+										usbd_control_complete_callback *complete)
 {
 	(void) complete;
 	(void) usbd_dev;
 	(void) len;
 	(void) buf;
 
-	// Buffer to hold data for loopback tests
-	static uint8_t loopback_buffer[sizeof(usbd_control_buffer)];
+	int status = USBD_REQ_NOTSUPP;
 
-	switch(req->bRequest) {
-		case 0:		// Toggle LED
-			gpio_toggle(LED_PINS_PORT, RIGHT_LED);
-			return USBD_REQ_HANDLED;
-			break;
-
-		case 1:		// Loopback write
-			toggle_led();
-			if (req->wLength > sizeof(usbd_control_buffer)) {
-				return USBD_REQ_NOTSUPP;
-			}
-			memcpy(loopback_buffer, *buf, req->wLength);
-			return USBD_REQ_HANDLED;
-			break;
-
-		case 2:		// Loopback read
-			// toggle_led();
-			if (req->wLength > sizeof(usbd_control_buffer)) {
-				return USBD_REQ_NOTSUPP;
-			}
-			*len = req->wLength;
-			memcpy(*buf, loopback_buffer, *len);
-			return USBD_REQ_HANDLED;
-			break;
-		default:
-			break;
+	// Check if the bRequest is valid and if it is, call the appropriate handler function
+	if (req->bRequest < ARRAY_LEN(usb_vendor_request_handlers))
+	{
+		const usb_vendor_request_fn handler = usb_vendor_request_handlers[req->bRequest];
+		status = handler(usbd_dev, req, buf, len, complete);
 	}
-
-	return USBD_REQ_NOTSUPP;
+	return status;
 }
 
 // Callback for when the OUT endpoint receives data
@@ -97,7 +119,7 @@ static void usb_set_config_cb(usbd_device *usbd_dev, uint16_t wValue)
 				usbd_dev,					// USB device
 				USB_REQ_TYPE_VENDOR | USB_REQ_TYPE_INTERFACE,
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-				simple_control_callback);	// Callback function
+				usb_vendor_request_callback);	// Callback function
 }
 
 void usb_init(void)
