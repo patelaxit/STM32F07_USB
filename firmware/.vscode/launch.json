@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "gdb",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "name": "PlatformIO Debugger",
+            "target": "c:/Users/Axit Patel/Desktop/USB_Simple/firmware/.pioenvs/stm32f072_disco/firmware.elf",
+            "gdbpath": "C:/Users/Axit Patel/.platformio/penv/Scripts/piodebuggdb",
+            "autorun": [ "source .pioinit" ]
+        }
+    ]
+}
