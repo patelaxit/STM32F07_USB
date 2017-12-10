@@ -12,29 +12,29 @@ const struct usb_device_descriptor dev_desc = {
 	.idVendor = 0x10C4,
 	.idProduct = 0x0007,
 	.bcdDevice = 0x0200,
-	.iManufacturer = 1,					// Index of manufacturer string
-	.iProduct = 2,						// Index of product name string
-	.iSerialNumber = 3,					// Index of serial number string
+	.iManufacturer = 1, // Index of manufacturer string
+	.iProduct = 2,		// Index of product name string
+	.iSerialNumber = 3, // Index of serial number string
 	.bNumConfigurations = 1,
 };
 
 // USB Endpoint Descriptor
 static const struct usb_endpoint_descriptor data_endp[] = {{
-	.bLength = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x01,
-	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
-	.bInterval = 1,
-},
-{
-	.bLength = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x81,
-	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
-	.bInterval = 1,
-}};
+															   .bLength = USB_DT_ENDPOINT_SIZE,
+															   .bDescriptorType = USB_DT_ENDPOINT,
+															   .bEndpointAddress = 0x01,
+															   .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+															   .wMaxPacketSize = 64,
+															   .bInterval = 1,
+														   },
+														   {
+															   .bLength = USB_DT_ENDPOINT_SIZE,
+															   .bDescriptorType = USB_DT_ENDPOINT,
+															   .bEndpointAddress = 0x81,
+															   .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+															   .wMaxPacketSize = 64,
+															   .bInterval = 1,
+														   }};
 
 // USB Interface Descriptor
 static const struct usb_interface_descriptor data_iface[] = {{
@@ -46,7 +46,7 @@ static const struct usb_interface_descriptor data_iface[] = {{
 	.bInterfaceClass = USB_CLASS_VENDOR,
 	.bInterfaceSubClass = 0,
 	.bInterfaceProtocol = 0,
-	.iInterface = 0,					// Index of interface descriptor (0 -> no string)
+	.iInterface = 0, // Index of interface descriptor (0 -> no string)
 	.endpoint = data_endp,
 }};
 
@@ -55,8 +55,7 @@ static const struct usb_interface ifaces[] = {
 	{
 		.num_altsetting = 1,
 		.altsetting = data_iface,
-	}
-};
+	}};
 
 // USB Configuration Descriptor
 const struct usb_config_descriptor config_desc = {
@@ -65,7 +64,7 @@ const struct usb_config_descriptor config_desc = {
 	.wTotalLength = 0,
 	.bNumInterfaces = 1,
 	.bConfigurationValue = 1,
-	.iConfiguration = 4,				// Index of configuration string
+	.iConfiguration = 4, // Index of configuration string
 	.bmAttributes = 0x80,
 	.bMaxPower = 0x32,
 	.interface = ifaces,

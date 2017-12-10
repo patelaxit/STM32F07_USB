@@ -19,7 +19,8 @@ int main(void)
 	usb_init();
 
 	// Continuously poll the USB device
-	while (1) {
+	while (1)
+	{
 		usb_isr();
 	}
 	return 0;
