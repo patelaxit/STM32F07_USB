@@ -4,6 +4,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include "usb.h"
 #include "led.h"
+#include "adc.h"
 
 // Initialize and configure clocks
 static void clock_init(void)
@@ -16,8 +17,9 @@ int main(void)
 {
 	clock_init();
 	led_init();
+	adc_init();
 	usb_init();
-
+	
 	// Continuously poll the USB device
 	while (1)
 	{

@@ -5,6 +5,7 @@ requests = (
     'LED_TOGGLE',
     'LED_ON',
     'LED_OFF',
+    'ADC_READ_VREF'
 )
 
 # Creates string constants with their respective index as value

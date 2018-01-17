@@ -10,6 +10,9 @@
 	"settings": {
 		"terminal.integrated.env.windows": {
 			"PATH": "C:\\Users\\Axit Patel\\.platformio\\penv\\Scripts;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Microchip\\xc32\\v1.40\\bin;C:\\Program Files\\LLVM\\bin;C:\\Program Files (x86)\\PuTTY\\;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2\\Scripts;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2\\Library\\bin;C:\\JavaLib;C:\\Program Files\\Java\\jdk1.8.0_73\\bin;C:\\Users\\Axit Patel\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\Axit Patel\\AppData\\Local\\atom\\bin;C:\\Users\\Axit Patel\\AppData\\Local\\Microsoft\\WindowsApps;;C:\\Program Files\\Microsoft VS Code\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Microchip\\xc32\\v1.40\\bin;C:\\Program Files\\LLVM\\bin;C:\\Program Files (x86)\\PuTTY\\;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2\\Scripts;C:\\Users\\Axit Patel\\AppData\\Local\\Continuum\\Miniconda2\\Library\\bin;C:\\JavaLib;C:\\Program Files\\Java\\jdk1.8.0_73\\bin;C:\\Users\\Axit Patel\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\Axit Patel\\AppData\\Local\\atom\\bin;C:\\Users\\Axit Patel\\AppData\\Local\\Microsoft\\WindowsApps;;C:\\Program Files\\Microsoft VS Code\\bin"
+		},
+		"files.associations": {
+			"gpio.h": "c"
 		}
 	}
 }

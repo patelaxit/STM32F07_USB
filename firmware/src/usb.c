@@ -8,6 +8,7 @@
 
 #include "helper.h"
 #include "led.h"
+#include "adc.h"
 #include "usb.h"
 #include "usb_desc.h"
 
@@ -65,6 +66,7 @@ static const usb_vendor_request_fn usb_vendor_request_handlers[] = {
     usb_vendor_request_led_toggle,
     usb_vendor_request_led_on,
     usb_vendor_request_led_off,
+    usb_vendor_request_adc_read_vref,
 };
 
 // Callback function for control transfers. We will handle the commands

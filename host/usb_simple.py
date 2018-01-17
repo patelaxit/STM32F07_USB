@@ -7,6 +7,11 @@ import vendor_requests
 def bytesToString(inArray):
 	return "".join(map(chr, inArray))
 
+def bytesToInteger(inArray):
+	array_str = inArray.tostring()
+	count = len(array_str)/2
+	return unpack("h"*count, array_str)[0]
+
 def stringToBytes(inString):
 	return array.array('B', inString)
 
@@ -50,7 +55,7 @@ if __name__ == '__main__':
 		
 		elif command == "loopback":
 			# Create empty array
-			str_out = "0x48"
+			str_out = "hello"
 			buf_out = stringToBytes(str_out)
 			buf_out_len = len(buf_out)
 			print "\n======================================================="
@@ -89,5 +94,17 @@ if __name__ == '__main__':
 			print "read {} bytes\nstring: {}\nbytes: {}".format(len(data), message, data)
 			print "=======================================================\n"
 
+		elif command == "adc vref":
+			print "\n======================================================="
+			print "Read ADC VREF"
+			print "======================================================="
+			
+			adc_val = dev.ctrl_transfer(reqIn, vendor_requests.ADC_READ_VREF, 0, 0, 4)
+			val = bytesToInteger(adc_val)
+			# Convert ADC digital code to voltage reading
+			voltage = 3.0 * (int(val) / 4095.0)
+			print "Reference voltage: {} V".format(voltage)
+			print "=======================================================\n"
+		
 		else:
 			print "Wrong input value. Try again"
